@@ -1,0 +1,82 @@
+{
+  "project_name": "digikam-sync-app",
+  "goal": "Membuat aplikasi Electron + TypeScript yang membaca database DigiKam (SQLite) secara lokal, mengekspor struktur album, metadata, dan thumbnail ke folder sinkronisasi (misalnya Syncthing) untuk digunakan oleh aplikasi frontend lain seperti LibrePhotos atau Flutter Gallery Viewer.",
+  "tech_stack": {
+    "frontend": "HTML + TypeScript (renderer.ts)",
+    "backend": "Electron main process (Node.js + sqlite3 + sharp)",
+    "packaging": "electron-forge + vite",
+    "language": "TypeScript"
+  },
+  "key_files": [
+    "electron-exporter.ts",
+    "preload.ts",
+    "renderer.ts",
+    "index.html"
+  ],
+  "main_features": [
+    "Buka database DigiKam (.db) secara manual dari file picker",
+    "Baca tabel Albums dan Photos (tanpa perlu NestJS/Express)",
+    "Generate file albums.json dan manifest.json di output folder",
+    "Salin thumbnail ke folder .thumb dalam struktur yang sama",
+    "Tampilkan progress bar selama proses ekspor",
+    "Log aktivitas di UI renderer",
+    "Mode offline (semua dijalankan di lokal)"
+  ],
+  "future_targets": [
+    "Integrasi dengan LibrePhotos/Nextcloud/Flutter untuk sinkronisasi otomatis",
+    "Fitur watch mode (memantau perubahan album di DB)",
+    "Optimisasi thumbnail agar lebih cepat",
+    "Kemungkinan menambahkan filter metadata (caption/date/rating)"
+  ],
+  "digikam_schema": {
+    "Albums": [
+      "id INTEGER PRIMARY KEY",
+      "albumRoot INTEGER NOT NULL",
+      "relativePath TEXT NOT NULL",
+      "date DATE",
+      "caption TEXT",
+      "collection TEXT",
+      "icon INTEGER",
+      "modificationDate DATETIME"
+    ],
+    "AlbumRoots": [
+      "id INTEGER PRIMARY KEY",
+      "label TEXT",
+      "specificPath TEXT"
+    ],
+    "Images": [
+      "id INTEGER PRIMARY KEY",
+      "album INTEGER",
+      "name TEXT",
+      "status INTEGER",
+      "category INTEGER",
+      "modificationDate DATETIME",
+      "fileSize INTEGER",
+      "uniqueHash TEXT"
+    ]
+  },
+  "ui_structure": {
+    "index.html": "Form input path (DB, Photos Root, Output Folder) + tombol Run Export + Log viewer + Progress bar",
+    "renderer.ts": "Wiring event listener ke electronAPI (pickPath, runExport)",
+    "electron-exporter.ts": "Membaca database SQLite, menulis JSON output, membuat thumbnail, dan update progress"
+  },
+  "integration_notes": {
+    "LibrePhotos": "Gunakan hasil ekspor albums.json dan manifest.json untuk mapping album di LibrePhotos.",
+    "FlutterApp": "Dapat membaca albums.json dan menampilkan grid album, sesuai struktur relatif folder.",
+    "Syncthing": "Direkomendasikan sebagai jalur sinkronisasi antar perangkat (desktop → server/photo-viewer)."
+  },
+  "dev_environment": {
+    "OS": "Windows 10/11",
+    "Electron": "^31.x",
+    "Node": ">=20",
+    "sqlite3": "npm install sqlite3",
+    "sharp": "npm install sharp",
+    "compiler": "ts-node + vite + electron-forge"
+  },
+  "continue_tips": [
+    "Gunakan @workspace summarize untuk memahami kode exporter",
+    "Gunakan @workspace improve progress bar UX",
+    "Gunakan @workspace add feature to generate thumbnails with retry",
+    "Abaikan folder node_modules, dist, .git"
+  ]
+}

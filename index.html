@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DigiKam Sync - Exporter</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #181818;
+      color: #eee;
+      padding: 20px;
+    }
+    h2 { margin-bottom: 20px; }
+    label { display: block; margin-top: 10px; }
+    input {
+      width: 70%;
+      padding: 6px;
+      border-radius: 5px;
+      border: 1px solid #333;
+      background: #222;
+      color: #eee;
+    }
+    button {
+      padding: 6px 12px;
+      margin-left: 8px;
+      border: none;
+      background: #0078d4;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover { background: #005fa3; }
+    progress {
+      width: 100%;
+      height: 18px;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .log {
+      background: #222;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      height: 180px;
+      overflow-y: auto;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>DigiKam Sync - Exporter</h2>
+
+  <label>Digikam DB Path</label>
+  <div><input id="dbPath" type="text" readonly /><button id="pickDb">Browse</button></div>
+
+  <label>Photos Root Folder</label>
+  <div><input id="photosRoot" type="text" readonly /><button id="pickPhotos">Browse</button></div>
+
+  <label>Output Folder (Syncthing or shared)</label>
+  <div><input id="outFolder" type="text" readonly /><button id="pickOut">Browse</button></div>
+
+  <div style="margin-top: 15px">
+    <button id="run">Run Export</button>
+  </div>
+
+  <progress id="progressBar" value="0" max="100"></progress>
+
+  <div class="log" id="log"></div>
+
+  <script type="module" src="/src/renderer.ts"></script>
+</body>
+</html>
