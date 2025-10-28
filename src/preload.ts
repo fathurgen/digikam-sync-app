@@ -16,5 +16,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onComplete: (callback: () => void) => {
     ipcRenderer.on('exportComplete', () => callback());
-  }
+  },
+  startServer: (photosRoot: string, outFolder: string, preferredPort?: number) =>
+    ipcRenderer.invoke('server-start', { photosRoot, outFolder, preferredPort }),
+  stopServer: () => ipcRenderer.invoke('server-stop'),
+  serverInfo: () => ipcRenderer.invoke('server-info'),
 });

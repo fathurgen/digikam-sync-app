@@ -1,3 +1,5 @@
+import QRCode from 'qrcode';
+
 document.addEventListener('DOMContentLoaded', () => {
   const dbEl = document.getElementById('dbPath') as HTMLInputElement;
   const photosEl = document.getElementById('photosRoot') as HTMLInputElement;
@@ -8,6 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const pickDb = document.getElementById('pickDb');
   const pickPhotos = document.getElementById('pickPhotos');
   const pickOut = document.getElementById('pickOut');
+
+  const btnStart = document.getElementById('btnStartServer');
+  const btnStop = document.getElementById('btnStopServer');
+  const serverUrlEl = document.getElementById('serverUrl');
 
   const appendLog = (s: string) => {
     if (logEl) {
@@ -78,5 +84,47 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       runButton.disabled = false;
     }
+  });
+
+
+
+  btnStart?.addEventListener('click', async () => {
+    const photosRoot = (document.getElementById('photosRoot') as HTMLInputElement).value;
+    const outFolder = (document.getElementById('outFolder') as HTMLInputElement).value;
+    if (!photosRoot || !outFolder) {
+      appendLog('Please set photosRoot and outFolder first');
+      return;
+    }
+    serverUrlEl!.textContent = 'Starting...';
+    const res: any = await (window as any).electronAPI.startServer(photosRoot, outFolder);
+    if (res.ok) {
+      const url = res.info.url;
+      serverUrlEl!.innerHTML = `Server running: <b>${url}</b><br>Albums: <code>${url}/albums.json</code>`;
+      appendLog('Server started: ' + url);
+    } else {
+      serverUrlEl!.textContent = 'Start failed: ' + res.error;
+      appendLog('Server start failed: ' + res.error);
+    }
+  });
+
+  btnStop?.addEventListener('click', async () => {
+    const res: any = await (window as any).electronAPI.stopServer();
+    if (res.ok) {
+      serverUrlEl!.textContent = 'Server stopped';
+      appendLog('Server stopped');
+    } else {
+      appendLog('Stop failed: ' + res.error);
+    }
+  });
+
+  // Build URL for QR code: prefer the server info shown in serverUrlEl, otherwise fallback to the current host with default port 3000
+  const serverText = serverUrlEl?.textContent || '';
+  const hostMatch = /https?:\/\/([^:/\s]+)(?::(\d+))?/.exec(serverText);
+  const host = hostMatch?.[1] || window.location.hostname || 'localhost';
+  const port = hostMatch?.[2] || '3000';
+  const tokenParam = new URLSearchParams(window.location.search).get('token') || '';
+  const url = `http://${host}:${port}${tokenParam ? `?token=${tokenParam}` : ''}`;
+  QRCode.toCanvas(document.getElementById('canvas') as HTMLCanvasElement, url, function (error: any) {
+    if (error) console.error(error);
   });
 });

@@ -3,6 +3,8 @@ import path from 'path';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import sharp from 'sharp';
+import Bonjour from 'bonjour';
+import dgram from 'dgram';
 
 type Album = {
 	id: string;
@@ -214,9 +216,46 @@ export async function preGenerateThumbnails(photosRoot: string, outFolder: strin
 	return results;
 }
 
+
+// bonjour and udp server -------------
+const PORT: number = process.env.PORT ? Number(process.env.PORT) : 3000;
+// const TOKEN: string = process.env.DIGIKAM_SYNC_TOKEN ?? crypto.randomBytes(8).toString('hex');
+const TOKEN: string = process.env.DIGIKAM_SYNC_TOKEN ?? crypto.randomBytes(8).toString('hex');
+const UDP_PORT: number = process.env.UDP_PORT ? Number(process.env.UDP_PORT) : 41234;
+
+export function startBonjourService(port: number) {
+  const bonjour = require('bonjour')();
+  bonjour.publish({
+    name: 'DigiKamSync',
+    type: 'http',
+		port: port,
+		txt: { token: TOKEN, path: '/api' }
+  });
+	console.log("bonjour listening on port " + port + " with token " + TOKEN);
+}
+
+export function startUdpDiscoveryServer(port: number) {
+  const dgram = require('dgram');
+  const udpServer = dgram.createSocket('udp4');
+	udpServer.on('message', (msg: any, rinfo: any) => {
+		// Cek pesan handshake, balas dengan info JSON
+		const response = JSON.stringify({
+		ip: rinfo.address,
+		port: port,
+		url: `http://${rinfo.address}:${port}`,
+		token: TOKEN
+		});
+		udpServer.send(response, rinfo.port, rinfo.address);
+	});
+	console.log("udpServer listening on port " + port + " with token " + TOKEN);
+  udpServer.bind(port);
+}
+
 export default {
 	exportAlbums,
 	generateManifest,
 	ensureThumbnail,
-	preGenerateThumbnails
+	preGenerateThumbnails,
+	startBonjourService,
+	startUdpDiscoveryServer
 };

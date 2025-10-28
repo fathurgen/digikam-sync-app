@@ -5,6 +5,7 @@ import * as path from 'path';
 import os from 'os';
 import { Worker } from 'worker_threads';
 import { exportAlbums, generateManifest, preGenerateThumbnails } from './services/electron-exporter';
+import { getServerInfo, startServer, stopServer } from './main/server';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -36,9 +37,6 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
 
 app.on('activate', () => {
@@ -49,6 +47,13 @@ app.on('activate', () => {
   }
 });
 
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+// function -----------------------------------
 ipcMain.handle('pick-path', async (ev, opts) => {
   const res: any = await dialog.showOpenDialog({ properties: opts.props || ['openFile'] });
   if (res.canceled) return null;
@@ -143,8 +148,34 @@ ipcMain.handle('run-export', async (_, args) => {
   }
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+// IPC handler to start server
+ipcMain.handle('server-start', async (_ev, { photosRoot, outFolder, preferredPort }: any) => {
+  try {
+    const info = await startServer(photosRoot, outFolder, preferredPort || 0);
+    // return info.url
+    return { ok: true, info };
+  } catch (err: any) {
+    console.error('startServer error', err);
+    return { ok: false, error: String(err.message || err) };
+  }
+});
+
+// IPC handler to stop server
+ipcMain.handle('server-stop', async () => {
+  try {
+    await stopServer();
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: String(err.message || err) };
+  }
+});
+
+// IPC handler to get current info
+ipcMain.handle('server-info', async () => {
+  try {
+    const info = getServerInfo();
+    return { ok: true, info };
+  } catch (err: any) {
+    return { ok: false, error: String(err.message || err) };
   }
 });
