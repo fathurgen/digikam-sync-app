@@ -7,7 +7,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('electronAPI', {
   // sendDataToMain: (data: string) => ipcRenderer.invoke('get-from-ui', data),
   pickPath: async (data: string[]) => await ipcRenderer.invoke('pick-path', { props: data }),
-  runExport: async (opts: any) => await ipcRenderer.invoke('run-export', opts),
+  // runExport: async (opts: any) => await ipcRenderer.invoke('run-export', opts),
   onProgress: (callback: (data: { type: string; progress: number; message?: string }) => void) => {
     ipcRenderer.on('exportProgress', (_event, data) => callback(data));
   },
@@ -17,8 +17,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onComplete: (callback: () => void) => {
     ipcRenderer.on('exportComplete', () => callback());
   },
-  startServer: (photosRoot: string, outFolder: string, preferredPort?: number) =>
-    ipcRenderer.invoke('server-start', { photosRoot, outFolder, preferredPort }),
+  startServer: (dbPath: string, photosRoot: string, outFolder: string, preferredPort?: number) =>
+    ipcRenderer.invoke('server-start', { dbPath, photosRoot, outFolder, preferredPort }),
   stopServer: () => ipcRenderer.invoke('server-stop'),
   serverInfo: () => ipcRenderer.invoke('server-info'),
 });

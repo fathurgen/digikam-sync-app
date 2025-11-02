@@ -7,7 +7,8 @@ import os from 'os';
 import multer from 'multer';
 import mime from 'mime';
 import { start } from 'repl';
-import { startBonjourService, startUdpDiscoveryServer } from '../services/electron-exporter';
+import { startBonjourService, startUdpDiscoveryServer } from '../services/exporter';
+import { MetadataService } from '../services/metadata';
 
 export type ServerHandle = {
   app: ReturnType<typeof express> | null;
@@ -284,6 +285,37 @@ export async function startServer(photosRoot: string, outFolder: string, preferr
 
   // expose broadcast via handle if needed (not exported here, but you can adapt)
   (handle as any).broadcast = broadcastEvent;
+
+  const metadataService = new MetadataService(path.join(outFolder, 'metadata.db'));
+
+  app.get('/api/manifest', (req, res) => {
+    res.json(metadataService.getAllFiles());
+  });
+
+  app.get('/api/changes', (req, res) => {
+    const since = Number(req.query.since || 0);
+    res.json({ files: metadataService.getChangedFiles(since) });
+  });
+
+  // Device status memory (simple)
+  type DeviceStatus = { status: string; device: string | null };
+  let deviceStatus: DeviceStatus = { status: 'Tidak ada', device: null };
+
+  // Endpoint untuk update status dari mobile
+  app.post('/api/device-status', express.json(), (req, res) => {
+    const { status, device } = req.body || {};
+    deviceStatus = {
+      status: status || 'Terkoneksi',
+      device: device || null
+    };
+    res.json({ ok: true });
+  });
+
+  // Endpoint untuk get status
+  app.get('/api/device-status', (req, res) => {
+    console.log('[device-status] requested:', deviceStatus);
+    res.json(deviceStatus);
+  });
 
   return getServerInfo(port);
 }

@@ -54,16 +54,16 @@
   <h2>DigiKam Sync - Exporter</h2>
 
   <label>Digikam DB Path</label>
-  <div><input id="dbPath" type="text" readonly /><button id="pickDb">Browse</button></div>
+  <div><input id="dbPath" type="text" readonly /><button id="btnPickDb">Browse</button></div>
 
   <label>Photos Root Folder</label>
-  <div><input id="photosRoot" type="text" readonly /><button id="pickPhotos">Browse</button></div>
+  <div><input id="photosRoot" type="text" readonly /><button id="btnPickPhotos">Browse</button></div>
 
   <label>Output Folder (Syncthing or shared)</label>
-  <div><input id="outFolder" type="text" readonly /><button id="pickOut">Browse</button></div>
+  <div><input id="outFolder" type="text" readonly /><button id="btnPickOut">Browse</button></div>
 
-  <div style="margin-top: 15px">
-    <button id="run">Run Export</button>
+  <div id="deviceInfo" style="margin-top:10px;">
+    <strong>Device Status:</strong> <span id="deviceStatus">Tidak ada</span>
   </div>
 
   <div style="margin-top:10px;">

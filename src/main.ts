@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import os from 'os';
 import { Worker } from 'worker_threads';
-import { exportAlbums, generateManifest, preGenerateThumbnails } from './services/electron-exporter';
+import { exportAlbums, generateManifest, preGenerateThumbnails, abortExport } from './services/exporter';
 import { getServerInfo, startServer, stopServer } from './main/server';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -61,9 +61,13 @@ ipcMain.handle('pick-path', async (ev, opts) => {
 });
 
 
-ipcMain.handle('run-export', async (_, args) => {
+// IPC handler to start server
+ipcMain.handle('server-start', async (_ev, args) => {
   try {
-    const { dbPath, photosRoot, outFolder } = args;
+    const { dbPath, photosRoot, outFolder, preferredPort } = args;
+    
+    // Start server
+    const info = await startServer(photosRoot, outFolder, preferredPort || 0);
     
     // Send initial progress
     mainWindow?.webContents.send('exportProgress', {
@@ -73,8 +77,7 @@ ipcMain.handle('run-export', async (_, args) => {
     });
 
     // Export albums
-    // const result = await exportAlbums(dbPath, photosRoot, outFolder);
-    const result = exportAlbums(dbPath, photosRoot, outFolder, (message, progress) => {
+    const result: any = await exportAlbums(dbPath, photosRoot, outFolder, (message, progress) => {
         mainWindow?.webContents.send('exportProgress', {
             type: 'albums',
             progress,
@@ -83,8 +86,7 @@ ipcMain.handle('run-export', async (_, args) => {
     });
 
     // Generate manifest
-    // await generateManifest(photosRoot, outFolder);
-    generateManifest(photosRoot, outFolder, (message, progress) => {
+    await generateManifest(photosRoot, outFolder, (message, progress) => {
         mainWindow?.webContents.send('exportProgress', {
             type: 'manifest',
             progress,
@@ -92,14 +94,14 @@ ipcMain.handle('run-export', async (_, args) => {
         });
     });
 
-    const allImages = result.albums.flatMap(a => a.images);
+    const allImages = Array.isArray(result?.albums) ? result.albums.flatMap((a: any) => a.images || []) : [];
     let processedCount = 0;
 
     // Process thumbnails in batches
     const batchSize = 10;
     for (let i = 0; i < allImages.length; i += batchSize) {
       const batch = allImages.slice(i, i + batchSize);
-      await Promise.all(batch.map(async (imagePath) => {
+      await Promise.all(batch.map(async (imagePath: any) => {
         try {
           const thumbDir = path.join(outFolder, '.thumbs');
           const thumbWorker = new Worker(
@@ -128,8 +130,8 @@ ipcMain.handle('run-export', async (_, args) => {
             });
 
             thumbWorker.postMessage({
-              srcPath: path.join(photosRoot, imagePath),
-              thumbPath: path.join(thumbDir, `${path.basename(imagePath)}.thumb.jpg`),
+              srcPath: path.join(photosRoot, imagePath.path),
+              thumbPath: path.join(thumbDir, `${path.basename(imagePath.path)}.thumb.jpg`),
               size: 256
             });
           });
@@ -140,19 +142,7 @@ ipcMain.handle('run-export', async (_, args) => {
     }
 
     mainWindow?.webContents.send('exportComplete');
-    return { ok: true };
-
-  } catch (error) {
-    mainWindow?.webContents.send('exportError', error.message);
-    return { ok: false, error: error.message };
-  }
-});
-
-// IPC handler to start server
-ipcMain.handle('server-start', async (_ev, { photosRoot, outFolder, preferredPort }: any) => {
-  try {
-    const info = await startServer(photosRoot, outFolder, preferredPort || 0);
-    // return info.url
+    
     return { ok: true, info };
   } catch (err: any) {
     console.error('startServer error', err);
@@ -163,6 +153,7 @@ ipcMain.handle('server-start', async (_ev, { photosRoot, outFolder, preferredPor
 // IPC handler to stop server
 ipcMain.handle('server-stop', async () => {
   try {
+    abortExport(); // Stop export/sync process
     await stopServer();
     return { ok: true };
   } catch (err: any) {
